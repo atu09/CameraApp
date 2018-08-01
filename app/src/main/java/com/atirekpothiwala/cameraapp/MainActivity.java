@@ -98,7 +98,12 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         this.ivSwitchCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                openCamera(cameraId == CameraCharacteristics.LENS_FACING_FRONT ? CameraCharacteristics.LENS_FACING_BACK : CameraCharacteristics.LENS_FACING_FRONT);
+                if (cameraId == CameraCharacteristics.LENS_FACING_FRONT){
+                    cameraId = CameraCharacteristics.LENS_FACING_BACK;
+                } else {
+                    cameraId = CameraCharacteristics.LENS_FACING_FRONT;
+                }
+                openCamera(cameraId);
             }
         });
 
@@ -106,9 +111,9 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
             @SuppressLint("StaticFieldLeak")
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
-                startActivityForResult(intent, SELECT_VIDEO);
-                //takeSnap();
+                //Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+                //startActivityForResult(intent, SELECT_VIDEO);
+                takeSnap();
             }
         });
     }
@@ -493,16 +498,20 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
             }
 
             if (isFrontCameraAvailable && isBackCameraAvailable) {
+                ivSnap.setVisibility(View.VISIBLE);
                 ivSwitchCamera.setVisibility(View.VISIBLE);
                 cameraId = CameraCharacteristics.LENS_FACING_BACK;
             } else {
                 ivSwitchCamera.setVisibility(View.GONE);
                 if (isFrontCameraAvailable) {
+                    ivSnap.setVisibility(View.VISIBLE);
                     cameraId = CameraCharacteristics.LENS_FACING_FRONT;
                 } else if (isBackCameraAvailable) {
+                    ivSnap.setVisibility(View.VISIBLE);
                     cameraId = CameraCharacteristics.LENS_FACING_BACK;
                 } else {
                     Toast.makeText(this, "Something went wrong with cameras, try again later!", Toast.LENGTH_SHORT).show();
+                    ivSnap.setVisibility(View.GONE);
                     cameraId = null;
                     return;
                 }
