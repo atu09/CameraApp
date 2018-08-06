@@ -134,19 +134,33 @@ public class Camera2Activity extends AppCompatActivity {
         this.ivFlash.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                switch (flashMode) {
-                    case CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH:
-                        flashMode = CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH;
-                        ivFlash.setImageResource(R.drawable.ic_flash_on);
-                        break;
-                    case CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH:
-                        flashMode = CaptureRequest.CONTROL_AE_MODE_OFF;
-                        ivFlash.setImageResource(R.drawable.ic_flash_off);
-                        break;
-                    case CaptureRequest.CONTROL_AE_MODE_OFF:
-                        flashMode = CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH;
-                        ivFlash.setImageResource(R.drawable.ic_flash_auto);
-                        break;
+
+                if (isFlashSupported) {
+                    switch (flashMode) {
+                        case CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH:
+                            flashMode = CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH;
+                            ivFlash.setImageResource(R.drawable.ic_flash_on);
+                            break;
+                        case CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH:
+                            flashMode = CaptureRequest.CONTROL_AE_MODE_OFF;
+                            ivFlash.setImageResource(R.drawable.ic_flash_off);
+                            break;
+                        case CaptureRequest.CONTROL_AE_MODE_OFF:
+                            flashMode = CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH;
+                            ivFlash.setImageResource(R.drawable.ic_flash_auto);
+                            break;
+                    }
+                } else {
+                    switch (flashMode) {
+                        case CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH:
+                            flashMode = CaptureRequest.CONTROL_AE_MODE_OFF;
+                            ivFlash.setImageResource(R.drawable.ic_flash_off);
+                            break;
+                        case CaptureRequest.CONTROL_AE_MODE_OFF:
+                            flashMode = CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH;
+                            ivFlash.setImageResource(R.drawable.ic_flash_on);
+                            break;
+                    }
                 }
             }
         });
@@ -248,7 +262,7 @@ public class Camera2Activity extends AppCompatActivity {
             ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader imageReader) {
-                    if (!isFlashSupported) {
+                    if (!isFlashSupported && flashMode == CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH) {
                         ObjectAnimator.ofFloat(viewFlash, View.ALPHA, 0, 8f, 0f).setDuration(100).start();
                     }
                     new ImageSaverTask(imageReader.acquireLatestImage()).execute();
@@ -269,7 +283,7 @@ public class Camera2Activity extends AppCompatActivity {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
                     try {
-                        if (!isFlashSupported) {
+                        if (!isFlashSupported && flashMode == CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH) {
                             ObjectAnimator.ofFloat(viewFlash, View.ALPHA, 0f, 0.8f).setDuration(100).start();
                         }
                         cameraCaptureSession.capture(captureRequestBuilder.build(), captureCallback, cameraHandler);
@@ -400,7 +414,10 @@ public class Camera2Activity extends AppCompatActivity {
 
             Boolean flash_availability = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
             isFlashSupported = (flash_availability == null ? false : flash_availability);
-            ivFlash.setVisibility(isFlashSupported ? View.VISIBLE : View.GONE);
+            if (!isFlashSupported && flashMode == CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH) {
+                flashMode = CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH;
+                ivFlash.setImageResource(R.drawable.ic_flash_on);
+            }
             cameraManager.openCamera(String.valueOf(cameraId), new CameraDevice.StateCallback() {
                 @Override
                 public void onOpened(@NonNull CameraDevice cameraDevice) {
@@ -611,20 +628,22 @@ public class Camera2Activity extends AppCompatActivity {
 
     private void stopRecordingVideo() {
 
-        mediaRecorder.stop();
-        mediaRecorder.reset();
-        Utils.popToast(this, "Video Recording Captured!");
+        if (mediaRecorder != null) {
+            mediaRecorder.stop();
+            mediaRecorder.reset();
+            Utils.popToast(this, "Video Recording Captured!");
+
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    isRecordingVideo = false;
+                }
+            }, 1000);
+
+            compressVideo(file.getAbsolutePath());
+        }
 
         createCameraPreview();
-
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                isRecordingVideo = false;
-            }
-        }, 1000);
-
-        compressVideo(file.getAbsolutePath());
     }
 
     @Override
